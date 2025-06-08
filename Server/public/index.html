@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Face Anti-Spoofing Video Processor</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Poppins", sans-serif;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        min-height: 100vh;
+        max-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: #fff;
+        padding: 20px;
+      }
+      .container {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 40px;
+        border-radius: 16px;
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+        max-width: 900px;
+        width: 100%;
+        display: flex;
+        gap: 40px;
+      }
+      .left,
+      .right {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      h1 {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 20px;
+        text-align: center;
+        width: 100%;
+      }
+      p {
+        font-size: 14px;
+        opacity: 0.8;
+        margin-bottom: 20px;
+        text-align: center;
+        width: 100%;
+      }
+      input[type="file"] {
+        display: none;
+      }
+      label.upload-btn,
+      button,
+      #startCameraBtn,
+      #stopCameraBtn,
+      #recordBtn {
+        display: inline-block;
+        padding: 12px 24px;
+        background-color: #ff6b81;
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        text-align: center;
+        border: none;
+      }
+      label.upload-btn:hover,
+      button:hover,
+      #startCameraBtn:hover,
+      #stopCameraBtn:hover,
+      #recordBtn:hover {
+        background-color: #ff4757;
+      }
+      #stopCameraBtn {
+        background-color: #e74c3c;
+      }
+      #stopCameraBtn:hover {
+        background-color: #c0392b;
+      }
+      #recordBtn {
+        background-color: #2ed573;
+        margin-left: 10px;
+      }
+      #recordBtn.recording {
+        background-color: #e74c3c;
+      }
+      .spinner {
+        margin: 20px auto;
+        width: 40px;
+        height: 40px;
+        border: 6px solid rgba(255, 255, 255, 0.3);
+        border-top: 6px solid #ff6b81;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        display: none;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      video {
+        width: 320px;
+        height: 240px;
+        border-radius: 12px;
+        background: black;
+        object-fit: contain;
+        margin-bottom: 10px;
+      }
+      a.download-btn {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #3498db;
+        color: white;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.3s ease;
+      }
+      a.download-btn:hover {
+        background-color: #2980b9;
+      }
+      .input-options {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="left">
+        <h1>Upload or Record Input Video</h1>
+
+        <div class="input-options">
+          <label for="videoFile" class="upload-btn">Choose Video File</label>
+          <button id="startCameraBtn" type="button">Use Camera</button>
+          <button id="stopCameraBtn" type="button" class="hidden">
+            Stop Camera
+          </button>
+          <button id="recordBtn" type="button" class="hidden">
+            Start Recording
+          </button>
+        </div>
+
+        <!-- Hidden file input -->
+        <input type="file" id="videoFile" name="videoFile" accept="video/*" />
+
+        <!-- Video previews -->
+        <video id="inputVideo" controls style="display: none"></video>
+        <video
+          id="cameraPreview"
+          autoplay
+          muted
+          playsinline
+          style="display: none"
+        ></video>
+        <video id="recordedVideo" controls style="display: none"></video>
+
+        <button id="uploadBtn" type="button" disabled>Upload & Process</button>
+
+        <div class="spinner" id="spinner"></div>
+      </div>
+
+      <div class="right">
+        <h1>Processed Result</h1>
+        <p>Download your processed video and see the verdict below:</p>
+
+        <!-- Download Button -->
+        <a
+          id="downloadLink"
+          class="download-btn"
+          href="#"
+          download="processed_video.mp4"
+          style="display: none"
+          >Download Processed Video</a
+        >
+
+        <!-- FINAL VERDICT TEXT -->
+        <p
+          id="verdictText"
+          style="margin-top: 20px; font-size: 18px; font-weight: bold"
+        ></p>
+      </div>
+    </div>
+
+    <script>
+      const videoFileInput = document.getElementById("videoFile");
+      const inputVideo = document.getElementById("inputVideo");
+
+      const startCameraBtn = document.getElementById("startCameraBtn");
+      const stopCameraBtn = document.getElementById("stopCameraBtn");
+      const recordBtn = document.getElementById("recordBtn");
+
+      const cameraPreview = document.getElementById("cameraPreview");
+      const recordedVideo = document.getElementById("recordedVideo");
+
+      const uploadBtn = document.getElementById("uploadBtn");
+      const spinner = document.getElementById("spinner");
+
+      const downloadLink = document.getElementById("downloadLink");
+
+      const verdictText = document.getElementById("verdictText");
+
+      let mediaStream = null;
+      let mediaRecorder = null;
+      let recordedChunks = [];
+
+      let usingCamera = false;
+      let recordedBlob = null;
+
+      function resetUI() {
+        inputVideo.style.display = "none";
+        inputVideo.src = "";
+
+        cameraPreview.style.display = "none";
+        recordedVideo.style.display = "none";
+        recordedVideo.src = "";
+
+        uploadBtn.disabled = true;
+        recordedBlob = null;
+
+        downloadLink.style.display = "none";
+        downloadLink.href = "#";
+
+        verdictText.textContent = "";
+      }
+
+      videoFileInput.addEventListener("change", () => {
+        resetUI();
+        if (videoFileInput.files.length) {
+          const fileURL = URL.createObjectURL(videoFileInput.files[0]);
+          inputVideo.src = fileURL;
+          inputVideo.style.display = "block";
+          usingCamera = false;
+          uploadBtn.disabled = false;
+          stopCamera();
+        }
+      });
+
+      startCameraBtn.addEventListener("click", async () => {
+        resetUI();
+        try {
+          mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true,
+          });
+          cameraPreview.srcObject = mediaStream;
+          cameraPreview.style.display = "block";
+          usingCamera = true;
+
+          startCameraBtn.classList.add("hidden");
+          stopCameraBtn.classList.remove("hidden");
+          recordBtn.classList.remove("hidden");
+          recordBtn.textContent = "Start Recording";
+
+          uploadBtn.disabled = true;
+        } catch (err) {
+          alert("Could not access camera: " + err.message);
+        }
+      });
+
+      stopCameraBtn.addEventListener("click", () => {
+        stopCamera();
+        resetUI();
+        startCameraBtn.classList.remove("hidden");
+        stopCameraBtn.classList.add("hidden");
+        recordBtn.classList.add("hidden");
+        uploadBtn.disabled = true;
+      });
+
+      function stopCamera() {
+        if (mediaStream) {
+          mediaStream.getTracks().forEach((track) => track.stop());
+          mediaStream = null;
+        }
+        cameraPreview.style.display = "none";
+      }
+
+      recordBtn.addEventListener("click", () => {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+          mediaRecorder.stop();
+        } else {
+          startRecording();
+        }
+      });
+
+      function startRecording() {
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(mediaStream, {
+          mimeType: "video/webm",
+        });
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) recordedChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          recordedBlob = new Blob(recordedChunks, { type: "video/webm" });
+          const url = URL.createObjectURL(recordedBlob);
+
+          recordedVideo.src = url;
+          recordedVideo.style.display = "block";
+
+          cameraPreview.style.display = "none";
+
+          uploadBtn.disabled = false;
+
+          recordBtn.textContent = "Start Recording";
+          recordBtn.classList.remove("recording");
+        };
+
+        mediaRecorder.start();
+        recordBtn.textContent = "Stop Recording";
+        recordBtn.classList.add("recording");
+
+        setTimeout(() => {
+          if (mediaRecorder && mediaRecorder.state === "recording")
+            mediaRecorder.stop();
+        }, 10000);
+      }
+
+      uploadBtn.addEventListener("click", async () => {
+        spinner.style.display = "block";
+        downloadLink.style.display = "none";
+        downloadLink.href = "#";
+        verdictText.textContent = "";
+
+        try {
+          const formData = new FormData();
+
+          if (usingCamera && recordedBlob) {
+            formData.append("video", recordedBlob, "recorded_video.webm");
+          } else if (!usingCamera && videoFileInput.files.length) {
+            formData.append("video", videoFileInput.files[0]);
+          } else {
+            alert("No video selected or recorded");
+            spinner.style.display = "none";
+            return;
+          }
+
+          const response = await fetch("/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error("Upload failed!");
+          }
+
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+
+          const verdict = response.headers.get("X-Final-Verdict") || "Unknown";
+          verdictText.textContent = "Final Verdict: " + verdict;
+
+          downloadLink.href = url;
+          downloadLink.style.display = "inline-block";
+        } catch (err) {
+          alert("An error occurred: " + err.message);
+        } finally {
+          spinner.style.display = "none";
+        }
+      });
+    </script>
+  </body>
+</html>
