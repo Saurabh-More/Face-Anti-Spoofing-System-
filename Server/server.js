@@ -38,7 +38,7 @@ app.post('/upload', upload.single('video'), (req, res) => {
 
   console.log(`Processing video: ${inputPath}`);
 
-  exec(`python process_video.py "${inputPath}" "${outputPath}"`, (error, stdout, stderr) => {
+  exec(`python3 process_video.py "${inputPath}" "${outputPath}"`, (error, stdout, stderr) => {
     // Remove input file after processing
     fs.unlink(inputPath, () => { });
 
